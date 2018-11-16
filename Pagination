@@ -1,0 +1,174 @@
+(function (factory) {
+    "use strict";
+    if (typeof define === 'function' && define.amd) {
+        define(['jquery'], factory);
+    }
+    else if (typeof module !== 'undefined' && module.exports) {
+        module.exports = factory(require('jquery'));
+    }
+    else {
+        factory(jQuery);
+    }
+}(function($, undefined){
+	//这里有个问题就是下标的初始化问题,后期针对需求订立标准
+    //目前是只要针对程序的都是以0为下标,对待显示的都是以1为下标
+	"use strict"
+	if ($.OnePage) {
+			return;
+	}
+	$.OnePage = {
+		version: '1.1.1.0',
+		Auth: 'Best_Hong',
+		Des: '精锐教育分页jquery插件,有问题请联系洪',
+		default:{
+			operator:1,
+		}
+	};
+	$.OnePage.Core= function(fun,item){
+		this._count=0;//所有的数量
+		this._pagesize=1;//当前的数量
+		this._pageindex=0;//当前的页数
+		this._executeFun=fun;
+		this._jq=item;
+		this._currentindex=2;//当前第几个li具有active类
+	};
+	$.OnePage.Core.prototype={
+		init:function(){
+			this._id= "pagination_"+this.findid();
+			this._html=this.create();
+			this._jq.html(this._html);
+			this.execute();
+			this.initEvent();
+        },
+        execute: function () {
+            var self = this;
+            this._executeFun(function (item, operator) {
+                self._count = item["count"];
+                self._pagesize = item["pagesize"];
+                self._pageindex = item["pageindex"];
+                if (!self._count && !self._pagesize && !self._pageindex) {
+                    console.log("请注意,传递的信息全部为小写,分别为count,pagesize,pageindex");
+                }
+                self._data = operator || item;
+                self.initHtml();
+            });
+        },
+        initHtml: function () {
+			var self = this;
+            var page = this.pageindex;
+			var all = this._pageall;
+            var current = 0;
+            $("#" + this._id + " li[name='item']").each(function (index) {
+				if(index>all){//如果数量不足,那么就隐藏多余的数量
+					$(this).hide();
+				}else{
+					if(all<5 || page <5){
+						current =index+1;
+					}else if(all - page<5){
+						current = all+index-4;
+					}else{
+						current =page+index;
+					}
+				}
+				if(page == current){
+					$(this).addClass("active").siblings().removeClass("active");
+				}
+				$(this).children().text(current);
+			});
+		},
+		initEvent:function(){
+			var self = this;
+			$("ul.pagination li[name='item']").on("click",function(){
+				$(this).addClass("active").siblings().removeClass("active");
+                self.pageindex = Number($(this).text());
+                self.setPageIndex();
+				return false
+			});
+			$("ul.pagination li[name !='item']").on("click",function(){
+                if ($(this).index() == 0) {
+                    if (self._pageindex == 0) {
+                        return;
+                    }
+					self._pageindex=0;
+					self._currentindex=0;
+                } else if ($(this).index() == 1) {
+                    if (self._pageindex == 0) {
+                        return;
+                    }
+					self._pageindex--;
+					self._currentindex--;
+                } else if ($(this).index() == 7) {
+                    if (self.pageindex == self._pageall) {
+                        return;
+                    }
+					self._pageindex++;
+					self._currentindex++;
+                } else {
+                    if (self.pageindex == self._pageall) {
+                        return;
+                    }
+                    self.pageindex=self._pageall;
+					self._currentindex=8;
+				}
+                self.setPageIndex();
+			});
+		},
+        setPageIndex() {
+            this._data["count"] = this._count;
+            this._data["pagesize"] = this._pagesize;
+            this._data["pageindex"] = this._pageindex;
+            this.execute();
+        },
+        get _pageall() {
+            var page = this._count / this._pagesize;
+            return Math.ceil(page);//总共具有多少页
+        },
+        get pageindex() {
+            return this._pageindex + 1;
+        },
+        set pageindex(value) {
+            this._pageindex = value - 1;
+        },
+        findid: function () {
+            return $("div[name='pagination']").length;
+        },
+        create: function () {//简单的创建分页插件拼接
+            return '<div class="dataTables_paginate paging_bootstrap_full_number" name="pagination" id="' + this._id + '">\
+                <ul class="pagination">\
+                    <li><a href="#">&laquo;</a></li>\
+                    <li><a><</a></li>\
+                    <li name="item" class="active"><a>1</a></li>\
+                    <li name="item"><a>2</a></li>\
+                    <li name="item"><a>3</a></li>\
+                    <li name="item"><a>4</a></li>\
+                    <li name="item"><a>5</a></li>\
+                    <li><a>></a></li>\
+                    <li><a href="#">&raquo;</a></li>\
+                </ul>\
+            </div>';
+        },
+        setCurrent: function () {
+            //点击图标按钮时候(区别于里面有数字的标签)需要对当前的分页进行改变,但是后期发现,不需要,因为每次点击都触发了一次
+            //初始化操作,那么就不要在执行这样的操作了,留下,做警示
+            var num = this.pageindex;
+            if (this._currentindex >= 6) {
+                $("#" + this._id + " li[name='item'] a").each(function (index) {
+                    $(this).html(num + index - 4);
+                })
+                this._currentindex = 6;
+            }
+            if (this._currentindex <= 2) {
+                $("#" + this._id + " li[name='item'] a").each(function (index) {
+                    $(this).html(num + index);
+                })
+                this._currentindex = 2;
+            }
+            $("ul.pagination li:eq(" + this._currentindex + ")").addClass("active").siblings().removeClass("active");//其实这里只有2/6两种状态
+        }
+	};
+	$.fn.OnePage=function(arg){
+		var a = new $.OnePage.Core(arg,$(this))
+		a.init();
+	}
+})
+)
