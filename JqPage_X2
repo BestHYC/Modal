@@ -1,0 +1,150 @@
+(function (factory) {
+    "use strict";
+    if (typeof define === 'function' && define.amd) {
+        define(['jquery'], factory);
+    }
+    else if (typeof module !== 'undefined' && module.exports) {
+        module.exports = factory(require('jquery'));
+    }
+    else {
+        factory(jQuery);
+    }
+}(function($, undefined){
+	//这里有个问题就是下标的初始化问题,后期针对需求订立标准
+    //目前是只要针对程序的都是以0为下标,对待显示的都是以1为下标
+	"use strict"
+	if ($.OnePage) {
+			return;
+	}
+	$.OnePage = {
+		version: '1.1.1.1',
+		Auth: 'Best_Hong',
+		Des: '精锐教育分页jquery插件,有问题请联系洪',
+		default:{
+			operator:1,
+		}
+	};
+	$.OnePage.Core= function(fun,item){
+		this._count=0;//所有的数量
+		this._pagesize=1;//当前的数量
+		this._pageindex=0;//当前的页数
+		this._executeFun=fun;
+		this._jq=item;
+	};
+	$.OnePage.Core.prototype={
+		init:function(){
+			this._id= "pagination_"+this.findid();
+			this._html=this.create();
+			this._jq.html(this._html);
+			this.execute();
+			this.initEvent();
+        },
+        execute: function () {
+            var self = this;
+            this._executeFun(function (item, operator) {
+                self._count = item["count"];
+                self._pagesize = item["pagesize"];
+                self._pageindex = item["pageindex"];
+                if (!self._count && !self._pagesize && !self._pageindex) {
+                    console.log("请注意,传递的信息全部为小写,分别为count,pagesize,pageindex");
+                }
+                self._data = operator || item;
+                self.initHtml();
+            });
+        },
+        initHtml: function () {
+            var page = this.pageindex;
+			var all = this._pageall;
+            var current = 0;
+            $("#" + this._id + " li[name='item']").each(function (index) {
+                if (index != 0 && index >= all) {//如果数量不足,那么就隐藏多余的数量
+                    $(this).hide();
+                } else {
+                    if (all < 5 || page <= 5) {
+                        current = index + 1;
+                    } else if (all - page < 5) {
+                        current = all + index - 4;
+                    } else {
+                        current = page + index;
+                    }
+                    if (page == current) {
+                        $(this).addClass("active").siblings().removeClass("active");
+                    }
+                    $(this).children().text(current);
+                }
+            });
+            $("#" + this._id + " li[name!='item']").removeClass("disabled").each(function (index) {
+                if (all == 0) {
+                    $(this).addClass("disabled");
+                } else {
+                    if (page == 1 && index <= 1) {
+                        $(this).addClass("disabled");
+                    }
+                    if (page == all && index >= 2) {
+                        $(this).addClass("disabled");
+                    }
+                }
+            })
+		},
+		initEvent:function(){
+			var self = this;
+            $("ul.pagination li[name='item']").on("click", function () {
+                if ($(this).hasClass("active")) return;
+                self.pageindex = Number($(this).text());
+                self.setPageIndex();
+				return false
+			});
+            $("ul.pagination li[name !='item']").on("click", function () {
+                if ($(this).hasClass("disabled")) return;
+                if ($(this).index() == 0) {
+					self._pageindex=0;
+                } else if ($(this).index() == 1) {
+					self._pageindex--;
+                } else if ($(this).index() == 7) {
+					self._pageindex++;
+                } else {
+                    self.pageindex=self._pageall;
+				}
+                self.setPageIndex();
+			});
+		},
+        setPageIndex() {
+            this._data["count"] = this._count;
+            this._data["pagesize"] = this._pagesize;
+            this._data["pageindex"] = this._pageindex;
+            this.execute();
+        },
+        get _pageall() {
+            return Math.ceil(this._count / this._pagesize);//总共具有多少页
+        },
+        get pageindex() {
+            return this._pageindex + 1;
+        },
+        set pageindex(value) {
+            this._pageindex = value - 1;
+        },
+        findid: function () {
+            return $("div[name='pagination']").length;
+        },
+        create: function () {//简单的创建分页插件拼接
+            return '<div class="dataTables_paginate paging_bootstrap_full_number" name="pagination" id="' + this._id + '">\
+                <ul class="pagination">\
+                    <li><a><i class="fa fa-angle-double-left"></i></a></li>\
+                    <li><a><i class="fa fa-angle-left"></i></a></li>\
+                    <li name="item" class="active"><a>1</a></li>\
+                    <li name="item"><a>2</a></li>\
+                    <li name="item"><a>3</a></li>\
+                    <li name="item"><a>4</a></li>\
+                    <li name="item"><a>5</a></li>\
+                    <li><a><i class="fa fa-angle-right"></i></a></li>\
+                    <li><a><i class="fa fa-angle-double-right"></i></a></li>\
+                </ul>\
+            </div>';
+        }
+	};
+	$.fn.OnePage=function(arg){
+		var a = new $.OnePage.Core(arg,$(this))
+		a.init();
+	}
+})
+)
