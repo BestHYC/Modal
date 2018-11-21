@@ -1,0 +1,117 @@
+var TdrTreeInit = function () {
+	function TreeInit(msg){
+		this.Init(msg)
+	}
+	TreeInit.prototype = {
+		InitData:function(arg){
+			var jsonArray = [];
+			var entities = JSON.parse(JSON.stringify(arg)).sort(this.Sort());
+	    	entities.forEach(function(item,index,array){
+	    		entities.slice(index+1).forEach(function(item_i,index_i){
+	    			if(item.ParentId == item_i.Id){
+	    				if(item_i.children){
+	    					item_i.children.push(item);
+	    				}else{
+	    					item_i["children"] = [];
+	    					item_i["children"].push(item);
+	    				}
+	    			}
+	    		})
+	    	});
+	    	entities.filter(function(current,index,array){
+	    		return current.ParentId=="0";
+	    	}).forEach(function(item,index,array){
+	    		jsonArray[index]={};
+	    		this.Copy(item,jsonArray[index]);
+	    	},this);
+		},
+		Sort:function(){
+			return function(a, b){
+		  		if(b.ParentId-a.ParentId != 0){
+		  			return b.ParentId-a.ParentId;
+		  		}else{
+		  			return a.Id - b.Id;
+		  		}
+			}
+		},
+		Copy:function(_old, _new){
+			_new["id"]=_old["Id"];
+			_new["text"] = _old["Name"];
+			if(_old.children){
+				_new["children"] = [];
+				var callItem = arguments.callee;
+				_old.children.forEach(function(item, index, array){
+					_new["children"][index]={};
+					callItem(item,_new["children"][index]);
+				});
+			}
+		},
+		Init: function (arg) {
+		    var msg = this.InitZero(this.DataToJson(arg["data"]));
+			var plugins = arg['plugins']?(arg["plugins"].indexOf("types")?arg['plugins']:arg['plugins'].push("types")):["types"];
+			var icon = this.Icon(arg['icon']);
+			console.log(msg);
+			var initTree =this.Merge({
+			    'plugins': plugins,
+			    'core': {
+			        "check_callback": true,
+			        "themes": {
+			            "responsive": false,
+                        "stripes": true
+			        },
+			        'data': msg
+			    },
+			    "types": icon
+			}, arg, function (prop) { if (prop == "id" || prop == "data" || prop == "icon" || prop == "plugins") return true; });
+			$(arg["id"]).jstree(initTree);
+		},
+		Icon:function(arg){
+			var iconInit={
+				"default" : {  
+	                "icon" : "fa fa-folder icon-state-warning icon-lg"  
+	            },
+	            "file" : {  
+	                "icon" : "fa fa-file icon-state-warning icon-lg"  
+	            }
+			};
+			
+			return arg?this.Merge(iconInit, arg):iconInit;
+		},
+		InitZero: function (msg) {
+		    msg.forEach(function (item, index) {
+		        if (item.parent == 0) item.parent = "#";
+		    });
+		    return msg;
+		},
+		DataToJson: function (msg) {
+			var value = "";
+			value = JSON.stringify(msg["value"]);
+			var strInit = { parent: "AreaParentId", id: "AreaId", text: "AreaName", '"#"': '"0"' };
+		 	Object.keys(this.Merge(strInit, msg, function(prop){if(prop == "value") return true; }))
+		 	.forEach(function(item, index, array){
+		 	    var reg =new RegExp(strInit[item], "g");
+		 	    value = value.replace(reg, item);
+		 	});
+		 	value = value.replace(/("parent":0)/g, '$1,"state": {"opened" : true}');
+			return JSON.parse(value);
+		},
+		/*
+		 将p中所有的可枚举属性全部复制至0中,并返回0,如果有同名属性,那么p中会替代o中的值
+		 并不处理getter/setter以及复制属性,返回一个对象
+		 * */
+		Merge:function(o, p,method){
+			for(var prop in p){
+				if(!p.hasOwnProperty(prop))continue;
+				if(method&&method(prop)) continue;
+				o[prop] = p[prop];
+			}
+			return o;
+		}
+	}
+	return {
+		Init:function(arg){
+		    new TreeInit(arg);
+		    //$("ul.jstree-container-ul").find("li[aria-level='1'],li[aria-level='2']").attr("aria-expanded", "true");
+		}
+	}
+}();
